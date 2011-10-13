@@ -1,0 +1,42 @@
+##################
+# Message Syntax #
+##################
+Command messages are completely capitalized and must only contain ASCII
+alphabetic characters.  Command parameters are separated with a single space
+characters. The final parameter may be preceded by an optional colon ":"
+character. All parameters (excluding the last, colon prefixed parameter) must
+not contain any space characters. The final parameter, if preceded by the
+colon, can contain all ASCII characters, except a newline character.  Commands
+are terminated with a newline character.  The following is an example of a
+valid command message: 
+
+HELLO param#1 param#2 param#3 :parameter #4\n
+
+The server may or may not send a response back to the client when it receives a
+command message.
+
+#################
+# Message Types #
+#################
+USER nickname
+JOIN channel_name 
+PRIVMSG channel_name :message_string 
+PRIVMSG nickname :message_string
+LIST
+
+Descibe commands in detail...
+
+####################
+# Joining a Server #
+####################
+1. TCP connection is established between the client and server 
+2. Before issuing any other commands to the server (with the exception of the QUIT
+command), the client must send a USER message to the server, requesting the use
+of the username specified by the parameter.
+3. The server will respond with one of the following messages:
+    a. ERROR_NEED_MORE_PARAMS - when the username parameter is missing or is empty
+    b. ERROR_ALREADY_REGISTERED - when the username is already in use
+    c. SUCCESS_WELCOME_TO_SERVER - when the username is not in use, and is successfully reserved for the client
+
+Only when the SUCCESS_WELCOME_TO_SERVER message is passed to the client may it send other commands to the server
+
