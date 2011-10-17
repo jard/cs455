@@ -7,7 +7,7 @@ import socket
 # the index is the username
 connections = {}
 
-# returns a 2-tuple containing the command message, and it's arguments
+# returns a 2-tuple containing the command message, and its arguments
 def parseCommandMessage(data):
     data = data.strip() # remove newline
     position_of_colon = data.find(":")
@@ -72,10 +72,11 @@ def handler(clientsocket, clientaddr):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Usage: %s <port>" % (sys.argv[0])
-        exit(1)
+        port = 5000
+    else:
+        port = int(sys.argv[1])
+
     host = socket.gethostbyname(socket.gethostname())
-    port = int(sys.argv[1])
     buf = 1024
     addr = (host, port)
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
