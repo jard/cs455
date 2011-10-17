@@ -24,11 +24,11 @@ def parseCommandMessage(data):
         data = first_part
     return data[0], data[1:]
 
-def handler(clientsocket, clientaddr):
-    print "Accepted connection from: ", clientaddr
+def handler(client_socket, client_addr):
+    print "Accepted connection from: ", client_addr
     username = None
     while 1:
-        data = clientsocket.recv(1024)
+        data = client_socket.recv(1024)
         cmd, args = parseCommandMessage(data)
         msg = None
 
@@ -38,7 +38,7 @@ def handler(clientsocket, clientaddr):
             # Username is available
             if requested_username not in connections:
                 username = requested_username
-                connections[username] = clientsocket
+                connections[username] = client_socket
                 msg = "SUCCESS_WELCOME_TO_SERVER\n"
             # Username is not available
             else:
@@ -63,12 +63,12 @@ def handler(clientsocket, clientaddr):
 
         if msg != None:
             try:
-                clientsocket.send(msg)
+                client_socket.send(msg)
             except socket.error, e:
                 # remove the connection if it still exists
                 if username in connections:
                     del connections[username]
-    clientsocket.close()
+    client_socket.close()
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -76,16 +76,17 @@ if __name__ == "__main__":
     else:
         port = int(sys.argv[1])
 
-    host = socket.gethostbyname(socket.gethostname())
+    #host = socket.gethostbyname(socket.gethostname())
+    host = 'localhost'
     buf = 1024
     addr = (host, port)
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    serversocket.bind(addr)
-    serversocket.listen(2)
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind(addr)
+    server_socket.listen(2)
 
     while 1:
         print "Server is listening for connections\n"
-        clientsocket, clientaddr = serversocket.accept()
-        thread.start_new_thread(handler, (clientsocket, clientaddr))
-    serversocket.close()
+        client_socket, client_addr = server_socket.accept()
+        thread.start_new_thread(handler, (client_socket, client_addr))
+    server_socket.close()
