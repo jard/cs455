@@ -66,6 +66,7 @@ of the following responses:
 * ERROR_CHANNEL_DOES_NOT_EXIST
 * ERROR_USER_DOES_NOT_EXIST
 * ERROR_MESSAGE_NOT_SENT_FOR_UNKNOWN_REASON
+* ERROR_NEED_MORE_PARAMS
 
 When a message is sent to the server, the server delivers it to the user
 specified, or the users currently on the channel (including the user who sent
@@ -101,6 +102,16 @@ channel does not exist the server does not list it (no error is reported).
 
 
 Command: PART
+Parameters: <channel> { <channel>} 
+The PART command is used to leave a channel. If no channel is specified, the
+response message will be ERROR_NEED_MORE_PARAMS. Otherwise, for each channel
+specified, the server will respond with a response messages. Each being
+separated by a newline character, and corresponding to the order of the
+parameters:
+
+* ERROR_CHANNEL_DOES_NOT_EXIST
+* ERROR_NOT_ON_CHANNEL
+* SUCCESS_PARTED_WITH_CHANNEL
 
 
 ####################
