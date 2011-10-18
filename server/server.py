@@ -38,23 +38,25 @@ class Server():
             res = "SUCCESS_WELCOME_TO_SERVER\n"
         chatter.pushMessage(res)
 
-    def join(self, chatter, channel_name):
-        res = None
-        # need to make this match /^#[A-Za-z0-9_.@-]{1,64}$/
-        if channel_name[0] != "#":
-            res = "ERROR_INVALID_CHANNEL_NAME\n"
-            chatter.pushMessage(res)
-            return res
+    def join(self, chatter, channels):
+        total_res = []
+        for channel_name in channels:
+            # need to make this match /^#[A-Za-z0-9_.@-]{1,64}$/
+            if channel_name[0] != "#":
+                res = "ERROR_INVALID_CHANNEL_NAME"
+            else:
+                if channel_name in self.channels:
+                    res = "SUCCESS_WELCOME_TO_CHANNEL"
+                    channel = self.channels[channel_name]
+                else:
+                    res = "SUCCESS_NEW_CHANNEL_CREATED"
+                    channel = Channel(channel_name)
 
-        if channel_name in self.channels:
-            res = "SUCCESS_WELCOME_TO_CHANNEL\n"
-            channel = self.channels[channel_name]
-        else:
-            res = "SUCCESS_NEW_CHANNEL_CREATED\n"
-            channel = Channel(channel_name)
-            self.channels[channel_name] = channel
-
-        channel.chatters[chatter.username] = chatter
+                self.channels[channel_name] = channel
+                channel.chatters[chatter.username] = chatter
+            total_res.append(res)
+        total_res.append("") # for the ending newline
+        res = "\n".join(total_res)
         chatter.pushMessage(res)
         return res
 

@@ -22,7 +22,7 @@ def parseCommandMessage(data):
         data = first_part
 
     if len(data) == 1:
-        data.append(None)
+        return data[0], None
 
     return data[0], data[1:]
 
@@ -39,7 +39,7 @@ def handler(client_socket, client_addr, serv):
         elif cmd == "PRIVMSG":
             msg = serv.privmsg(client, args[0], args[1])
         elif cmd == "JOIN":
-            msg = serv.join(client, args[0])
+            msg = serv.join(client, args)
         elif cmd == "LIST":
             msg = serv.list(client, args)
         elif cmd == "PART":
