@@ -61,7 +61,7 @@ def handler(client_socket, client_addr):
                 except socket.error, e:
                     # connection doesn't exist anymore
                     del connections[send_to]
-                    msg = "ERROR_USER_NOT_CONNECTED\n"
+                    msg = "ERROR_USER_DOES_NOT_EXIST\n"
         else:
             msg = "ERROR_INVALID_COMMAND\n"
 
