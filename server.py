@@ -6,6 +6,9 @@ import socket
 # holds the sockets for everyone who connects AND issues a USER command
 # the index is the username
 connections = {}
+# can't have multiple threads mutating the connections dictionary at the same
+# time
+connections_lock = thread.allocate_lock()
 
 # returns a 2-tuple containing the command message, and its arguments
 def parseCommandMessage(data):
@@ -32,9 +35,11 @@ def handler(client_socket, client_addr):
         cmd, args = parseCommandMessage(data)
         msg = None
 
+        # we need exclusive access to the connections dictionary in here
+        connections_lock.acquire()
+
         if cmd == "USER":
             requested_username = args[0]
-            # need a mutex here
             # Username is available
             if requested_username not in connections:
                 username = requested_username
@@ -45,7 +50,6 @@ def handler(client_socket, client_addr):
                 msg = "ERROR_ALREADY_REGISTERED\n"
         elif cmd == "PRIVMSG":
             send_to = args[0]
-            # need another mutex here
             if send_to not in connections:
                 msg = "ERROR_USER_DOES_NOT_EXIST\n"
             else:
@@ -68,6 +72,8 @@ def handler(client_socket, client_addr):
                 # remove the connection if it still exists
                 if username in connections:
                     del connections[username]
+
+        connections_lock.release()
     client_socket.close()
 
 if __name__ == "__main__":
