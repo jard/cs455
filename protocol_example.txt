@@ -18,7 +18,7 @@ command message.
 #################
 # Message Types #
 #################
-Command: USER 
+Command: USER
 Parameters: nickname
 The USER message sets the user's nickname on the server when the connection is
 initially established. The nickname parameter must match the following regular
@@ -30,35 +30,75 @@ The server will respond with one of the following messages:
 * SUCCESS_WELCOME_TO_SERVER - when the username is not in use, and is
 successfully reserved for the client
 
+
 Command: JOIN 
 Parameters: <channel> { <channel>} 
-The JOIN command is used to join a channel.  After successfully joining the
-channel, the client begins receiving the chat messages sent to the channel. If
-no channel is specified the server will respond with a ERROR_NEED_MORE_PARAMS
-message. For each channel specified the server will respond with:
-SUCCESS_WELCOME_TO_CHANNEL or ERROR_CHANNEL_DOES_NOT_EXIST 
+The JOIN command is used to create and join a channel.  After successfully
+joining the channel, the client begins receiving the chat messages sent to the
+channel. If no channel is specified the server will respond with a
+ERROR_NEED_MORE_PARAMS message. For each channel specified, the server will
+respond with one of the following messages:
+
+* SUCCESS_WELCOME_TO_CHANNEL - when the channel already exists and the user
+successfully joined it
+* SUCCESS_NEW_CHANNEL_CREATED - when the channel did not already exist and the
+user successfully joined it
+* ERROR_INVALID_CHANNEL_NAME - when the channel name is invalid (described
+below)
+
 Each response is terminated with a \n and the order of the messages corresponds
-to the order of the parameters.
+to the order of the parameters. 
+
+The channel parameters must match the following regular expression:
+/^#[A-Za-z0-9_.@-]{1,64}$/
+Note the only difference between a channel name and a username is the
+preceeding '#' symbol.
+
 
 Command: PRIVMSG 
 Parameters: <channel>|<nickname> :message_string 
+The PRIVMSG command is used to send a message to a user or broadcast a message
+to all the users on a channel. Upon sending a message, the sender receives one
+of the following responses:
+
+* SUCCESS_MESSAGE_SENT_TO_CHANNEL
+* SUCCESS_MESSAGE_SENT_TO_USER
+* ERROR_CHANNEL_DOES_NOT_EXIST
+* ERROR_USER_DOES_NOT_EXIST
+* ERROR_MESSAGE_NOT_SENT_FOR_UNKNOWN_REASON
+
+When a message is sent to the server, the server delivers it to the user
+specified, or the users currently on the channel (including the user who sent
+the message), using the following format:
+
+* PRIVMSG <sender_nickname> :message_string - if the message is sent to an
+individual user
+* PRIVMSG <sender_nickname><channel> :message_string - if the message is being
+sent to a channel 
+
+where <sender_nickname> is the nickname of the person sending the message, and
+<channel> is the name of the channel being addressed.
+
 
 Command: LIST
 Parameters: [<channel>{ <channel>}]
 The list message is used to list the public channels on the server, and their
 topics. The server responds to this message by sending the client a list of
 channels in the following format:
+
 channel_1 topic_1
 channel_2 topic_2
 channel_3 topic_3
 .
 .
 .
+
 where 'channel_n' is the name of the channel, and 'topic_n' is the channel's
 topic. Each channel/topic pair is listed on its own line, and is terminated with
 a \n. If one or more channels is specified in the command's parameters, the
 server only returns the channel/topic pairs for the specified channels. If the
 channel does not exist the server does not list it (no error is reported).
+
 
 Command: PART
 
