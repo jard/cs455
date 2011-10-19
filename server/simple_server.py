@@ -2,10 +2,14 @@ import sys
 import re
 import thread
 import socket
-import server
+from server import Server, Chatter
 
+DEFAULT_PORT = 5000
+DEFAULT_HOST = 'localhost'
+BUFFER_SIZE = 1024
 
 # returns a 2-tuple containing the command message, and its arguments
+# if there are no arguments, args is set to the empty array
 def parseCommandMessage(data):
     data = data.strip() # remove newline
     position_of_colon = data.find(":")
@@ -22,54 +26,78 @@ def parseCommandMessage(data):
         data = first_part
 
     if len(data) == 1:
-        return data[0], None
+        return data[0], []
 
     return data[0], data[1:]
 
-def handler(client_socket, client_addr, serv):
-    client = server.Chatter(client_socket, client_addr)
+# when a client connects, this function gets excuted on the newly created
+# thread
+def onClientConnected(client_socket, client_addr, server):
+    client = Chatter(client_socket, client_addr)
     print "Accepted connection from: ", client.addr
+    # wait for something to come from the socket
     while 1:
-        data = client_socket.recv(1024)
+        # get and parse the command from the socket
+        data = client_socket.recv(BUFFER_SIZE)
+        if data == "":
+            break
         cmd, args = parseCommandMessage(data)
         msg = None
 
+        # which command is it?
         if cmd == "USER":
-            msg = serv.username(client, args[0])
+            if len(args) < 1:
+                client.pushMessage("ERROR_NEED_MORE_PARAMS\n")
+            else:
+                msg = server.user(client, args[0])
         elif cmd == "PRIVMSG":
-            msg = serv.privmsg(client, args[0], args[1])
+            if len(args) < 1:
+                client.pushMessage("ERROR_NEED_MORE_PARAMS\n")
+            else:
+                msg = server.privmsg(client, args[0], args[1])
         elif cmd == "JOIN":
-            msg = serv.join(client, args)
+            msg = server.join(client, args)
         elif cmd == "LIST":
-            msg = serv.list(client, args)
+            msg = server.list(client, args)
         elif cmd == "PART":
-            msg = serv.part(client, args)
+            msg = server.part(client, args)
+        elif cmd == "QUIT":
+            break;
         else:
             msg = "ERROR_INVALID_COMMAND\n"
+            client.pushMessage(msg)
 
+        # this is the message that was sent to the client (print it on the
+        # server for debugging purposes)
         if msg != None:
             print msg
 
+    server.quit(client)
+    print "Closed connection from ", client.addr
     client_socket.close()
 
 if __name__ == "__main__":
+    #host = socket.gethostbyname(socket.gethostname())
     if len(sys.argv) != 2:
-        port = 5000
+        port = DEFAULT_PORT
     else:
         port = int(sys.argv[1])
 
-    #host = socket.gethostbyname(socket.gethostname())
-    host = 'localhost'
-    buf = 1024
+    # setup the server socket
+    host = DEFAULT_HOST
     addr = (host, port)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind(addr)
     server_socket.listen(2)
-    serv = server.Server(host, port)
 
+    # create our little server
+    server = Server(host, port)
+
+    # wait for connections
     while 1:
         print "Server is listening for connections\n"
+        # spawn off a new thread for this connection
         client_socket, client_addr = server_socket.accept()
-        thread.start_new_thread(handler, (client_socket, client_addr, serv))
+        thread.start_new_thread(onClientConnected, (client_socket, client_addr, server))
     server_socket.close()
