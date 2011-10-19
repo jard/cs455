@@ -27,6 +27,7 @@ expression:
 The server will respond with one of the following messages:
 * ERROR_NEED_MORE_PARAMS - when the username parameter is missing or is empty
 * ERROR_ALREADY_REGISTERED - when the username is already in use 
+
 * SUCCESS_WELCOME_TO_SERVER - when the username is not in use, and is
 successfully reserved for the client
 
