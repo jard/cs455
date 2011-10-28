@@ -27,7 +27,6 @@ expression:
 The server will respond with one of the following messages:
 * ERROR_NEED_MORE_PARAMS - when the username parameter is missing or is empty
 * ERROR_ALREADY_REGISTERED - when the username is already in use 
-
 * SUCCESS_WELCOME_TO_SERVER - when the username is not in use, and is
 successfully reserved for the client
 
@@ -114,6 +113,28 @@ parameters:
 * ERROR_NOT_ON_CHANNEL
 * SUCCESS_PARTED_WITH_CHANNEL
 
+
+Command: QUIT
+Parameters: :message_string
+The QUIT command is issued by the client to the server. The server will
+immediately close the TCP connection to the client. The client is removed from
+all channels, and their username is freed. If the message_string parameter is
+not present, the message_string is assumed to be the empty string.
+
+The server will broadcast the following message to all the clients on the
+server:
+
+QUIT username :message_string
+
+
+Command: SQUIT
+Parameters: :message_string
+When the server is shutdown, an SQUIT command is issued to all the clients.
+After the message is delivered to a client, the server will close the TCP
+connection to the client. The message broadcast to all the clients (before the
+TCP connections are closed) is:
+
+SQUIT :message_string
 
 ####################
 # Joining a Server #
