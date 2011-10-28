@@ -170,20 +170,34 @@ class Server():
         return res
 
     # remove the user from the server
-    def quit(self, chatter):
+    def quit(self, chatter, message):
         # remove the user from all the channels they are in
         for channel_name in self.channels.keys():
             self.removeChatterFromChannel(chatter, self.channels[channel_name])
 
-        # now delete chatter from server
-        del self.chatters[chatter.username]
-        chatter.quit()
+        quitter_username = chatter.username
+        msg = None
+        # only send quit message if they have a username
+        if quitter_username:
+            # now delete chatter from server
+            del self.chatters[chatter.username]
+            chatter.quit()
+
+            # broadcast message to everyone else
+            msg = "QUIT " + quitter_username  + " :" + message + "\n"
+            for username, chatter in self.chatters.items():
+                chatter.pushMessage(msg)
+
+        return msg
 
     # close the server 
-    def squit(self):
+    def squit(self, message):
+        msg = "SQUIT :" + message + "\n"
         for username, chatter in self.chatters.items():
-            chatter.pushMessage("SQUIT\n")
+            chatter.pushMessage(msg)
             chatter.quit()
+
+        return msg
 
     ###########
     # helpers #

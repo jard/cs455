@@ -72,7 +72,7 @@ def onClientConnected(client_socket, client_addr, server):
         if msg != None:
             print msg
 
-    server.quit(client)
+    server.quit(client, args[0] if args else "")
     print "Closed connection from ", client.addr
     client_socket.close()
 
@@ -102,6 +102,6 @@ if __name__ == "__main__":
             client_socket, client_addr = server_socket.accept()
             thread.start_new_thread(onClientConnected, (client_socket, client_addr, server))
     except KeyboardInterrupt:
-        server.squit()
+        server.squit("I was killed by a ^C")
 
     server_socket.close()
