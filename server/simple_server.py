@@ -95,9 +95,13 @@ if __name__ == "__main__":
     server = Server(host, port)
 
     # wait for connections
-    while 1:
-        print "Server is listening for connections\n"
-        # spawn off a new thread for this connection
-        client_socket, client_addr = server_socket.accept()
-        thread.start_new_thread(onClientConnected, (client_socket, client_addr, server))
+    try:
+        while 1:
+            print "Server is listening for connections on %s:%s\n" % (host, port)
+            # spawn off a new thread for this connection
+            client_socket, client_addr = server_socket.accept()
+            thread.start_new_thread(onClientConnected, (client_socket, client_addr, server))
+    except KeyboardInterrupt:
+        server.squit()
+
     server_socket.close()

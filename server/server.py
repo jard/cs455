@@ -12,7 +12,10 @@ class Channel():
         return str(self.name + " " + self.topic)
 
     def partWithChatter(self, chatter):
-        del self.chatters[chatter.username]
+        try:
+            del self.chatters[chatter.username]
+        except KeyError, e:
+            pass # chatter already left channel
         return len(self.chatters)
 
 class Chatter():
@@ -34,6 +37,10 @@ class Chatter():
 
         # the user probably already left (and hasn't been removed yet)
         return False
+
+    # close TCP connection
+    def quit(self):
+        self.socket.close()
 
 class Server():
     def __init__(self, host, port):
@@ -97,16 +104,15 @@ class Server():
     # list all the channels on the server, or just the ones specified
     def list(self, chatter, channels):
         channel_list = []
+        # list only the channels specified
+        for k in channels:
+            # only add it to the response if it actually exists
+            if k in self.channels:
+                channel_list.append(str(self.channels[k]))
         # list all the channels
-        if channels == []:
+        else:
             for k in self.channels:
                 channel_list.append(str(self.channels[k]))
-        # list only the channels specified
-        else:
-            for k in channels:
-                # only add it to the response if it actually exists
-                if k in self.channels:
-                    channel_list.append(str(self.channels[k]))
 
         # all done, send the big response back to the client
         channel_list.append("") # for the terminating newline char
@@ -165,19 +171,19 @@ class Server():
 
     # remove the user from the server
     def quit(self, chatter):
-        del self.chatters[chatter.username]
-
         # remove the user from all the channels they are in
-        # Because we can't delete in a for..in loop, we need to cache the
-        # channels first
-        channels_to_remove_from = []
-        for channel_name in self.channels:
-            channels_to_remove_from.append(self.channels[channel_name])
+        for channel_name in self.channels.keys():
+            self.removeChatterFromChannel(chatter, self.channels[channel_name])
 
-        # now actually remove the user from the channel
-        for channel in channels_to_remove_from:
-            self.removeChatterFromChannel(chatter, channel)
+        # now delete chatter from server
+        del self.chatters[chatter.username]
+        chatter.quit()
 
+    # close the server 
+    def squit(self):
+        for username, chatter in self.chatters.items():
+            chatter.pushMessage("SQUIT\n")
+            chatter.quit()
 
     ###########
     # helpers #
