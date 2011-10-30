@@ -26,7 +26,8 @@ public class SocketInterface extends Thread {
 		/* Write command to socket */
 		System.out.printf("Sending: ");
 		System.out.println(s);
-		outToServer.writeBytes(s);
+		byte[] c = s.getBytes();
+		outToServer.write(c, 0, s.length());
 	
 	}
 	
