@@ -39,6 +39,7 @@ def onClientConnected(client_socket, client_addr, server):
     while 1:
         # get and parse the command from the socket
         data = client_socket.recv(BUFFER_SIZE)
+        # socket is broken, need to quit
         if data == "":
             break
 
@@ -46,20 +47,21 @@ def onClientConnected(client_socket, client_addr, server):
         msg = server.handleCommand(client, cmd, args)
 
         # quit command was issued
-        if msg == False:
+        if msg[:4] == "QUIT":
             break
 
         # this is the message that was sent to the client (print it on the
         # server for debugging purposes)
         print msg
 
-
-    # client killed connection rudely, so we need to issue quit command
     if data == "":
-        print "Rudely closed connection"
+        # client killed connection rudely, so we need to issue quit command
         server.quit(client, "")
+        print "Closed connection from ", client.addr, " who didn't issue the QUIT command!"
+    else:
+        # clean close
+        print "Closed connection from ", client.addr
 
-    print "Closed connection from ", client.addr
 
 if __name__ == "__main__":
     #host = socket.gethostbyname(socket.gethostname())

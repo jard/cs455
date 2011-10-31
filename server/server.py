@@ -105,7 +105,6 @@ class Server():
             msg = self.part(client, args)
         elif cmd == "QUIT":
             msg = self.quit(client, args[0] if args else "")
-            msg = False # signal exit
 
         return msg
 
