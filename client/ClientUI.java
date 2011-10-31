@@ -3,6 +3,7 @@ import java.awt.TextArea;
 import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
 
 import javax.swing.BoxLayout;
 import javax.swing.JFrame;
@@ -45,10 +46,10 @@ public class ClientUI implements ActionListener {
 			// TODO: parse client message into IRC protocol format
 			
 			try {
-				this.socketI.toSocket(s);
 				if(s.equals("QUIT")){
-					socketI.close();
-					System.exit(0);
+					quit();
+				} else {
+					this.socketI.toSocket(s);
 				}
 			} catch (Exception e1) {
 				e1.printStackTrace();
@@ -59,12 +60,35 @@ public class ClientUI implements ActionListener {
 	}	
 
 	/**
+	 * This method is called when the user enters the message QUIT or if
+	 * they close the client window.
+	 */
+	private void quit() {
+		try {
+			this.socketI.toSocket("QUIT");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		socketI.close();
+		System.exit(0);		
+	}
+
+	/**
 	 * Creates the GUI portion of the client
 	 */
+	@SuppressWarnings("serial")
 	private void createFrame( ){
-		topFrame = new JFrame( "jamIRC" );
+		topFrame = new JFrame( "jamIRC" ){
+			@Override
+			// this method is called when the window is closed
+			public void dispose() {
+				quit();	// calls the client's quit method
+			}
+			
+		};
 		lbl = new JPanel();
-		topFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		topFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	// call Jframe's dispose method when closed
 		topFrame.setResizable(false);
 		topFrame.setSize(500,500);
 		topFrame.setLocationRelativeTo(null);
