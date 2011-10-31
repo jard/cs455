@@ -51,7 +51,7 @@ def onClientConnected(client_socket, client_addr, server):
             else:
                 msg = server.user(client, args[0])
         elif cmd == "PRIVMSG":
-            if len(args) < 1:
+            if len(args) < 2:
                 client.pushMessage("ERROR_NEED_MORE_PARAMS\n")
             else:
                 msg = server.privmsg(client, args[0], args[1])
