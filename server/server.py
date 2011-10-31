@@ -1,5 +1,21 @@
 import re
 import socket
+
+SUCCESS_WELCOME_TO_SERVER = "SUCCESS_WELCOME_TO_SERVER"
+SUCCESS_WELCOME_TO_CHANNEL = "SUCCESS_WELCOME_TO_CHANNEL"
+SUCCESS_NEW_CHANNEL_CREATED = "SUCCESS_NEW_CHANNEL_CREATED"
+SUCCESS_PARTED_WITH_CHANNEL = "SUCCESS_PARTED_WITH_CHANNEL"
+SUCCESS_MESSAGE_SENT_TO_CHANNEL = "SUCCESS_MESSAGE_SENT_TO_CHANNEL"
+SUCCESS_MESSAGE_SENT_TO_USER = "SUCCESS_MESSAGE_SENT_TO_USER"
+
+ERROR_INVALID_USERNAME = "ERROR_INVALID_USERNAME"
+ERROR_ALREADY_REGISTERED = "ERROR_ALREADY_REGISTERED"
+ERROR_INVALID_CHANNEL_NAME = "ERROR_INVALID_CHANNEL_NAME"
+ERROR_NOT_ON_CHANNEL = "ERROR_NOT_ON_CHANNEL"
+ERROR_USER_DOES_NOT_EXIST = "ERROR_USER_DOES_NOT_EXIST"
+ERROR_CHANNEL_DOES_NOT_EXIST = "ERROR_CHANNEL_DOES_NOT_EXIST"
+
+
 class Channel():
     def __init__(self, name, topic=""):
         self.name = name
@@ -56,13 +72,13 @@ class Server():
     # sets the username of chatter (if it is available)
     def user(self, chatter, username):
         if not self.isValidUsername(username):
-            res = "ERROR_INVALID_USERNAME\n"
+            res = ERROR_INVALID_USERNAME + "\n"
         elif username in self.chatters:
-            res = "ERROR_ALREADY_REGISTERED\n"
+            res = ERROR_ALREADY_REGISTERED + "\n"
         else:
             chatter.username = username
             self.chatters[username] = chatter
-            res = "SUCCESS_WELCOME_TO_SERVER\n"
+            res = SUCCESS_WELCOME_TO_SERVER + "\n"
         chatter.pushMessage(res)
         return res
 
@@ -76,16 +92,16 @@ class Server():
         for channel_name in channels:
             # bad channel name
             if not self.isValidChannelName(channel_name):
-                res = "ERROR_INVALID_CHANNEL_NAME"
+                res = ERROR_INVALID_CHANNEL_NAME
             # valid channel name
             else:
                 # they are joining an already existing channel
                 if channel_name in self.channels:
-                    res = "SUCCESS_WELCOME_TO_CHANNEL"
+                    res = SUCCESS_WELCOME_TO_CHANNEL
                     channel = self.channels[channel_name]
                 # they are creating a new channel
                 else:
-                    res = "SUCCESS_NEW_CHANNEL_CREATED"
+                    res = SUCCESS_NEW_CHANNEL_CREATED
                     channel = Channel(channel_name)
 
                 # add to our list of channels
@@ -104,13 +120,15 @@ class Server():
     # list all the channels on the server, or just the ones specified
     def list(self, chatter, channels):
         channel_list = []
-        # list only the channels specified
-        for k in channels:
-            # only add it to the response if it actually exists
-            if k in self.channels:
-                channel_list.append(str(self.channels[k]))
-        # list all the channels
+
+        if channels:
+            # list only the channels specified
+            for k in channels:
+                # only add it to the response if it actually exists
+                if k in self.channels:
+                    channel_list.append(str(self.channels[k]))
         else:
+            # list all the channels
             for k in self.channels:
                 channel_list.append(str(self.channels[k]))
 
@@ -130,11 +148,11 @@ class Server():
             if k in self.channels and chatter.username in self.channels[k].chatters:
                 # remove the chatter from the channel
                 self.removeChatterFromChannel(chatter, self.channels[k])
-                channel_list.append("SUCCESS_PARTED_WITH_CHANNEL")
+                channel_list.append(SUCCESS_PARTED_WITH_CHANNEL)
             elif k in self.channels:
-                channel_list.append("ERROR_NOT_ON_CHANNEL")
+                channel_list.append(ERROR_NOT_ON_CHANNEL)
             else:
-                channel_list.append("ERROR_CHANNEL_DOES_NOT_EXIST")
+                channel_list.append(ERROR_CHANNEL_DOES_NOT_EXIST)
 
         # send the big response message back to client
         channel_list.append("") # for the terminating newline char
@@ -152,19 +170,19 @@ class Server():
                 # send the message to every user on the channel
                 for username in channel.chatters:
                     self.chatters[username].pushMessage("PRIVMSG %s%s :%s\n" % (chatter.username, send_to, msg))
-                res = "SUCCESS_MESSAGE_SENT_TO_CHANNEL\n"
+                res = SUCCESS_MESSAGE_SENT_TO_CHANNEL + "\n"
             # bad channel name
             else:
-                res = "ERROR_CHANNEL_DOES_NOT_EXIST\n"
+                res = ERROR_CHANNEL_DOES_NOT_EXIST + "\n"
         # send to user
         else:
             # does the user actually exist?
             if send_to in self.chatters:
                 # send the message to the user specified
                 self.chatters[send_to].pushMessage("PRIVMSG %s :%s\n" % (chatter.username, msg))
-                res = "SUCCESS_MESSAGE_SENT_TO_USER\n"
+                res = SUCCESS_MESSAGE_SENT_TO_USER + "\n"
             else:
-                res = "ERROR_USER_DOES_NOT_EXIST\n"
+                res = ERROR_USER_DOES_NOT_EXIST + "\n"
 
         chatter.pushMessage(res)
         return res
