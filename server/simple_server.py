@@ -2,7 +2,7 @@ import sys
 import re
 import thread
 import socket
-from server import Server, Chatter
+from server import Server, Client
 
 DEFAULT_PORT = 5000
 DEFAULT_HOST = 'localhost'
@@ -33,7 +33,7 @@ def parseCommandMessage(data):
 # when a client connects, this function gets excuted on the newly created
 # thread
 def onClientConnected(client_socket, client_addr, server):
-    client = Chatter(client_socket, client_addr)
+    client = Client(client_socket, client_addr)
     print "Accepted connection from: ", client.addr
     # wait for something to come from the socket
     while 1:
@@ -41,40 +41,25 @@ def onClientConnected(client_socket, client_addr, server):
         data = client_socket.recv(BUFFER_SIZE)
         if data == "":
             break
-        cmd, args = parseCommandMessage(data)
-        msg = None
 
-        # which command is it?
-        if cmd == "USER":
-            if len(args) < 1:
-                client.pushMessage("ERROR_NEED_MORE_PARAMS\n")
-            else:
-                msg = server.user(client, args[0])
-        elif cmd == "PRIVMSG":
-            if len(args) < 2:
-                client.pushMessage("ERROR_NEED_MORE_PARAMS\n")
-            else:
-                msg = server.privmsg(client, args[0], args[1])
-        elif cmd == "JOIN":
-            msg = server.join(client, args)
-        elif cmd == "LIST":
-            msg = server.list(client, args)
-        elif cmd == "PART":
-            msg = server.part(client, args)
-        elif cmd == "QUIT":
-            break;
-        else:
-            msg = "ERROR_INVALID_COMMAND\n"
-            client.pushMessage(msg)
+        cmd, args = parseCommandMessage(data)
+        msg = server.handleCommand(client, cmd, args)
+
+        # quit command was issued
+        if msg == False:
+            break
 
         # this is the message that was sent to the client (print it on the
         # server for debugging purposes)
-        if msg != None:
-            print msg
+        print msg
 
-    server.quit(client, args[0] if args else "")
+
+    # client killed connection rudely, so we need to issue quit command
+    if data == "":
+        print "Rudely closed connection"
+        server.quit(client, "")
+
     print "Closed connection from ", client.addr
-    client_socket.close()
 
 if __name__ == "__main__":
     #host = socket.gethostbyname(socket.gethostname())

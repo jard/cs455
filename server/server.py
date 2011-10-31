@@ -1,42 +1,45 @@
 import re
 import socket
 
-SUCCESS_WELCOME_TO_SERVER = "SUCCESS_WELCOME_TO_SERVER"
-SUCCESS_WELCOME_TO_CHANNEL = "SUCCESS_WELCOME_TO_CHANNEL"
-SUCCESS_NEW_CHANNEL_CREATED = "SUCCESS_NEW_CHANNEL_CREATED"
-SUCCESS_PARTED_WITH_CHANNEL = "SUCCESS_PARTED_WITH_CHANNEL"
-SUCCESS_MESSAGE_SENT_TO_CHANNEL = "SUCCESS_MESSAGE_SENT_TO_CHANNEL"
-SUCCESS_MESSAGE_SENT_TO_USER = "SUCCESS_MESSAGE_SENT_TO_USER"
+SUCCESS_WELCOME_TO_SERVER = "SUCCESS_WELCOME_TO_SERVER\n"
+SUCCESS_WELCOME_TO_CHANNEL = "SUCCESS_WELCOME_TO_CHANNEL\n"
+SUCCESS_NEW_CHANNEL_CREATED = "SUCCESS_NEW_CHANNEL_CREATED\n"
+SUCCESS_PARTED_WITH_CHANNEL = "SUCCESS_PARTED_WITH_CHANNEL\n"
+SUCCESS_MESSAGE_SENT_TO_CHANNEL = "SUCCESS_MESSAGE_SENT_TO_CHANNEL\n"
+SUCCESS_MESSAGE_SENT_TO_USER = "SUCCESS_MESSAGE_SENT_TO_USER\n"
 
-ERROR_INVALID_USERNAME = "ERROR_INVALID_USERNAME"
-ERROR_ALREADY_REGISTERED = "ERROR_ALREADY_REGISTERED"
-ERROR_INVALID_CHANNEL_NAME = "ERROR_INVALID_CHANNEL_NAME"
-ERROR_NOT_ON_CHANNEL = "ERROR_NOT_ON_CHANNEL"
-ERROR_USER_DOES_NOT_EXIST = "ERROR_USER_DOES_NOT_EXIST"
-ERROR_CHANNEL_DOES_NOT_EXIST = "ERROR_CHANNEL_DOES_NOT_EXIST"
+ERROR_INVALID_USERNAME = "ERROR_INVALID_USERNAME\n"
+ERROR_ALREADY_REGISTERED = "ERROR_ALREADY_REGISTERED\n"
+ERROR_INVALID_CHANNEL_NAME = "ERROR_INVALID_CHANNEL_NAME\n"
+ERROR_NOT_ON_CHANNEL = "ERROR_NOT_ON_CHANNEL\n"
+ERROR_USER_DOES_NOT_EXIST = "ERROR_USER_DOES_NOT_EXIST\n"
+ERROR_CHANNEL_DOES_NOT_EXIST = "ERROR_CHANNEL_DOES_NOT_EXIST\n"
+ERROR_USERNAME_REQUIRED = "ERROR_USERNAME_REQUIRED\n"
+ERROR_NEED_MORE_PARAMS = "ERROR_NEED_MORE_PARAMS\n"
+ERROR_INVALID_COMMAND  = "ERROR_INVALID_COMMAND\n"
 
 
 class Channel():
     def __init__(self, name, topic=""):
         self.name = name
         self.topic = topic
-        # keep track of the chatters on this channel using a dictionary (where
+        # keep track of the clients on this channel using a dictionary (where
         # the key is their username)
-        self.chatters = {}
+        self.clients = {}
 
     def __str__(self):
         return str(self.name + " " + self.topic)
 
-    def partWithChatter(self, chatter):
+    def partWithClient(self, client):
         try:
-            del self.chatters[chatter.username]
+            del self.clients[client.username]
         except KeyError, e:
-            pass # chatter already left channel
-        return len(self.chatters)
+            pass # client already left channel
+        return len(self.clients)
 
-class Chatter():
+class Client():
     def __init__(self, socket, addr):
-        # a chatter doesn't have a username until they request one from the
+        # a client doesn't have a username until they request one from the
         # server
         self.username = None
         self.socket = socket
@@ -47,7 +50,7 @@ class Chatter():
         try:
             bytes_sent = self.socket.send(msg)
             if bytes_sent == len(msg):
-                return True
+                return msg
         except socket.error, e:
             pass 
 
@@ -59,6 +62,13 @@ class Chatter():
         self.socket.close()
 
 class Server():
+    COMMAND_META = {"USER":    {'params': 1, 'username_required': False},
+                    "PRIVMSG": {'params': 2, 'username_required': True},
+                    "JOIN":    {'params': 1, 'username_required': True},
+                    "LIST":    {'params': 0, 'username_required': True},
+                    "PART":    {'params': 1, 'username_required': True},
+                    "QUIT":    {'params': 0, 'username_required': False}}
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -67,23 +77,53 @@ class Server():
         self.channels = {}
         # keep track of all the clients who connect on this server
         # store as dictionary so we can index by username
-        self.chatters = {}
+        self.clients = {}
 
-    # sets the username of chatter (if it is available)
-    def user(self, chatter, username):
+    def handleCommand(self, client, cmd, args):
+        # valid command?
+        if cmd not in Server.COMMAND_META:
+            return client.pushMessage(ERROR_INVALID_COMMAND)
+            
+        meta = Server.COMMAND_META[cmd]
+        # need username?
+        if not client.username and meta['username_required']:
+            return client.pushMessage(ERROR_USERNAME_REQUIRED)
+        # need more params?
+        if len(args) < meta['params']:
+            return client.pushMessage(ERROR_NEED_MORE_PARAMS)
+
+        # clear to issue command
+        if cmd == "USER":
+            msg = self.user(client, args[0])
+        elif cmd == "PRIVMSG":
+            msg = self.privmsg(client, args[0], args[1])
+        elif cmd == "JOIN":
+            msg = self.join(client, args)
+        elif cmd == "LIST":
+            msg = self.list(client, args)
+        elif cmd == "PART":
+            msg = self.part(client, args)
+        elif cmd == "QUIT":
+            msg = self.quit(client, args[0] if args else "")
+            msg = False # signal exit
+
+        return msg
+
+    # sets the username of client (if it is available)
+    def user(self, client, username):
         if not self.isValidUsername(username):
-            res = ERROR_INVALID_USERNAME + "\n"
-        elif username in self.chatters:
-            res = ERROR_ALREADY_REGISTERED + "\n"
+            res = ERROR_INVALID_USERNAME
+        elif username in self.clients:
+            res = ERROR_ALREADY_REGISTERED
         else:
-            chatter.username = username
-            self.chatters[username] = chatter
-            res = SUCCESS_WELCOME_TO_SERVER + "\n"
-        chatter.pushMessage(res)
+            client.username = username
+            self.clients[username] = client
+            res = SUCCESS_WELCOME_TO_SERVER
+        client.pushMessage(res)
         return res
 
     # join the channel or channels specified (by their name) 
-    def join(self, chatter, channels):
+    def join(self, client, channels):
         # since multiple channels can be specified, we need to keep track of
         # all the response messages for each channel
         total_res = [] 
@@ -107,18 +147,18 @@ class Server():
                 # add to our list of channels
                 self.channels[channel_name] = channel
                 # add the user to the channel
-                channel.chatters[chatter.username] = chatter
+                channel.clients[client.username] = client
             # tack on the response message for this channel
             total_res.append(res)
 
         # all done, send the big response to the client
         total_res.append("") # for the ending newline
         res = "\n".join(total_res)
-        chatter.pushMessage(res)
+        client.pushMessage(res)
         return res
 
     # list all the channels on the server, or just the ones specified
-    def list(self, chatter, channels):
+    def list(self, client, channels):
         channel_list = []
 
         if channels:
@@ -135,19 +175,19 @@ class Server():
         # all done, send the big response back to the client
         channel_list.append("") # for the terminating newline char
         res = "\n".join(channel_list)
-        chatter.pushMessage(res)
+        client.pushMessage(res)
         return res
 
     # leave a channel
-    def part(self, chatter, channels):
+    def part(self, client, channels):
         # keep track of all the response messages for every channel you are
         # leaving
         channel_list = []
         for k in channels:
             # only remove the user from the channel if they're on it
-            if k in self.channels and chatter.username in self.channels[k].chatters:
-                # remove the chatter from the channel
-                self.removeChatterFromChannel(chatter, self.channels[k])
+            if k in self.channels and client.username in self.channels[k].clients:
+                # remove the client from the channel
+                self.removeClientFromChannel(client, self.channels[k])
                 channel_list.append(SUCCESS_PARTED_WITH_CHANNEL)
             elif k in self.channels:
                 channel_list.append(ERROR_NOT_ON_CHANNEL)
@@ -157,63 +197,63 @@ class Server():
         # send the big response message back to client
         channel_list.append("") # for the terminating newline char
         res = "\n".join(channel_list)
-        chatter.pushMessage(res)
+        client.pushMessage(res)
         return res
 
     # send a message to a user or entire channel
-    def privmsg(self, chatter, send_to, msg):
+    def privmsg(self, client, send_to, msg):
         # send to channel
         if send_to[0] == "#":
             # does the channel actually exist?
             if send_to in self.channels:
                 channel = self.channels[send_to]
                 # send the message to every user on the channel
-                for username in channel.chatters:
-                    self.chatters[username].pushMessage("PRIVMSG %s%s :%s\n" % (chatter.username, send_to, msg))
-                res = SUCCESS_MESSAGE_SENT_TO_CHANNEL + "\n"
+                for username in channel.clients:
+                    self.clients[username].pushMessage("PRIVMSG %s%s :%s\n" % (client.username, send_to, msg))
+                res = SUCCESS_MESSAGE_SENT_TO_CHANNEL
             # bad channel name
             else:
-                res = ERROR_CHANNEL_DOES_NOT_EXIST + "\n"
+                res = ERROR_CHANNEL_DOES_NOT_EXIST
         # send to user
         else:
             # does the user actually exist?
-            if send_to in self.chatters:
+            if send_to in self.clients:
                 # send the message to the user specified
-                self.chatters[send_to].pushMessage("PRIVMSG %s :%s\n" % (chatter.username, msg))
-                res = SUCCESS_MESSAGE_SENT_TO_USER + "\n"
+                self.clients[send_to].pushMessage("PRIVMSG %s :%s\n" % (client.username, msg))
+                res = SUCCESS_MESSAGE_SENT_TO_USER
             else:
-                res = ERROR_USER_DOES_NOT_EXIST + "\n"
+                res = ERROR_USER_DOES_NOT_EXIST
 
-        chatter.pushMessage(res)
+        client.pushMessage(res)
         return res
 
     # remove the user from the server
-    def quit(self, chatter, message):
+    def quit(self, client, message):
         # remove the user from all the channels they are in
         for channel_name in self.channels.keys():
-            self.removeChatterFromChannel(chatter, self.channels[channel_name])
+            self.removeClientFromChannel(client, self.channels[channel_name])
 
-        quitter_username = chatter.username
+        quitter_username = client.username
         msg = None
         # only send quit message if they have a username
         if quitter_username:
-            # now delete chatter from server
-            del self.chatters[chatter.username]
-            chatter.quit()
+            # now delete client from server
+            del self.clients[client.username]
+            client.quit()
 
             # broadcast message to everyone else
             msg = "QUIT " + quitter_username  + " :" + message + "\n"
-            for username, chatter in self.chatters.items():
-                chatter.pushMessage(msg)
+            for username, client in self.clients.items():
+                client.pushMessage(msg)
 
         return msg
 
     # close the server 
     def squit(self, message):
         msg = "SQUIT :" + message + "\n"
-        for username, chatter in self.chatters.items():
-            chatter.pushMessage(msg)
-            chatter.quit()
+        for username, client in self.clients.items():
+            client.pushMessage(msg)
+            client.quit()
 
         return msg
 
@@ -223,9 +263,9 @@ class Server():
 
     # removes the user from the channel, and delete the channel if no one is in
     # it anymore
-    def removeChatterFromChannel(self, chatter, channel):
-        chatters_remaining = channel.partWithChatter(chatter)
-        if chatters_remaining == 0:
+    def removeClientFromChannel(self, client, channel):
+        clients_remaining = channel.partWithClient(client)
+        if clients_remaining == 0:
             del self.channels[channel.name]
 
     def isValidChannelName(self, name):
