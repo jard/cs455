@@ -3,12 +3,12 @@
 ##################
 Command messages are completely capitalized and must only contain ASCII
 alphabetic characters.  Command parameters are separated with a single space
-characters. The final parameter may be preceded by an optional colon ":"
+character. The final parameter may be preceded by an optional colon ":"
 character. All parameters (excluding the last, colon prefixed parameter) must
 not contain any space characters. The final parameter, if preceded by the
 colon, can contain all ASCII characters, except a newline character.  Commands
 are terminated with a newline character.  The following is an example of a
-valid command message: 
+valid command message format:
 
 HELLO param#1 param#2 param#3 :parameter #4\n
 
@@ -30,9 +30,14 @@ The server will respond with one of the following messages:
 * SUCCESS_WELCOME_TO_SERVER - when the username is not in use, and is
 successfully reserved for the client
 
+After a SUCCESS_WELCOME_TO_SERVER message is received, the client may send
+another USER message, but a ERROR_CANNOT_CHANGE_USERNAME message will be sent
+in place of SUCCESS_WELCOME_TO_SERVER. A user cannot change their username.
+
 
 Command: JOIN 
 Parameters: <channel> { <channel>} 
+Parameters: <channel> :topic_description
 The JOIN command is used to create and join a channel.  After successfully
 joining the channel, the client begins receiving the chat messages sent to the
 channel. If no channel is specified the server will respond with a
@@ -55,6 +60,17 @@ Note the only difference between a channel name and a username is the
 preceeding '#' symbol.
 
 
+Command: TOPIC
+Parameters: <channel> :topic_string
+This command sets the topic for the channel. Only the user who created the
+channel can set the topic. One of the following response messages will be sent
+to the client upon issuing the command:
+* SUCCESS_TOPIC_SET - when the channel topic is successfully modified
+* ERROR_CHANNEL_DOES_NOT_EXIST - when the channel does not exist
+* ERROR_CANNOT_SET_CHANNEL_TOPIC - when the user requesting the change did not create the channel
+* ERROR_NEED_MORE_PARAMS - when a parameter is missing
+
+
 Command: PRIVMSG 
 Parameters: <channel>|<nickname> :message_string 
 The PRIVMSG command is used to send a message to a user or broadcast a message
@@ -65,7 +81,6 @@ of the following responses:
 * SUCCESS_MESSAGE_SENT_TO_USER
 * ERROR_CHANNEL_DOES_NOT_EXIST
 * ERROR_USER_DOES_NOT_EXIST
-* ERROR_MESSAGE_NOT_SENT_FOR_UNKNOWN_REASON
 * ERROR_NEED_MORE_PARAMS
 
 When a message is sent to the server, the server delivers it to the user
@@ -87,9 +102,9 @@ The list message is used to list the public channels on the server, and their
 topics. The server responds to this message by sending the client a list of
 channels in the following format:
 
-channel_1 topic_1
-channel_2 topic_2
-channel_3 topic_3
+channel_1 :topic_1
+channel_2 :topic_2
+channel_3 :topic_3
 .
 .
 .
