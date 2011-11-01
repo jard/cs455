@@ -7,6 +7,7 @@ SUCCESS_NEW_CHANNEL_CREATED = "SUCCESS_NEW_CHANNEL_CREATED\n"
 SUCCESS_PARTED_WITH_CHANNEL = "SUCCESS_PARTED_WITH_CHANNEL\n"
 SUCCESS_MESSAGE_SENT_TO_CHANNEL = "SUCCESS_MESSAGE_SENT_TO_CHANNEL\n"
 SUCCESS_MESSAGE_SENT_TO_USER = "SUCCESS_MESSAGE_SENT_TO_USER\n"
+SUCCESS_TOPIC_SET = "SUCCESS_TOPIC_SET\n"
 
 ERROR_INVALID_USERNAME = "ERROR_INVALID_USERNAME\n"
 ERROR_ALREADY_REGISTERED = "ERROR_ALREADY_REGISTERED\n"
@@ -17,18 +18,21 @@ ERROR_CHANNEL_DOES_NOT_EXIST = "ERROR_CHANNEL_DOES_NOT_EXIST\n"
 ERROR_USERNAME_REQUIRED = "ERROR_USERNAME_REQUIRED\n"
 ERROR_NEED_MORE_PARAMS = "ERROR_NEED_MORE_PARAMS\n"
 ERROR_INVALID_COMMAND  = "ERROR_INVALID_COMMAND\n"
+ERROR_CANNOT_CHANGE_USERNAME = "ERROR_CANNOT_CHANGE_USERNAME\n"
+ERROR_CANNOT_SET_CHANNEL_TOPIC = "ERROR_CANNOT_SET_CHANNEL_TOPIC\n"
 
 
 class Channel():
-    def __init__(self, name, topic=""):
+    def __init__(self, name, owner, topic=""):
         self.name = name
         self.topic = topic
+        self.owner = owner
         # keep track of the clients on this channel using a dictionary (where
         # the key is their username)
         self.clients = {}
 
     def __str__(self):
-        return str(self.name + " " + self.topic)
+        return str(self.name + " " + self.owner.username + " :" + self.topic)
 
     def partWithClient(self, client):
         try:
@@ -65,6 +69,7 @@ class Server():
     COMMAND_META = {"USER":    {'params': 1, 'username_required': False},
                     "PRIVMSG": {'params': 2, 'username_required': True},
                     "JOIN":    {'params': 1, 'username_required': True},
+                    "TOPIC":   {'params': 2, 'username_required': True},
                     "LIST":    {'params': 0, 'username_required': True},
                     "PART":    {'params': 1, 'username_required': True},
                     "QUIT":    {'params': 0, 'username_required': False}}
@@ -99,6 +104,8 @@ class Server():
             msg = self.privmsg(client, args[0], args[1])
         elif cmd == "JOIN":
             msg = self.join(client, args)
+        elif cmd == "TOPIC":
+            msg = self.topic(client, args[0], args[1])
         elif cmd == "LIST":
             msg = self.list(client, args)
         elif cmd == "PART":
@@ -110,6 +117,8 @@ class Server():
 
     # sets the username of client (if it is available)
     def user(self, client, username):
+        if client.username:
+            res = ERROR_CANNOT_CHANGE_USERNAME
         if not self.isValidUsername(username):
             res = ERROR_INVALID_USERNAME
         elif username in self.clients:
@@ -141,7 +150,7 @@ class Server():
                 # they are creating a new channel
                 else:
                     res = SUCCESS_NEW_CHANNEL_CREATED
-                    channel = Channel(channel_name)
+                    channel = Channel(channel_name, client)
 
                 # add to our list of channels
                 self.channels[channel_name] = channel
@@ -151,8 +160,20 @@ class Server():
             total_res.append(res)
 
         # all done, send the big response to the client
-        total_res.append("") # for the ending newline
-        res = "\n".join(total_res)
+        res = "".join(total_res)
+        client.pushMessage(res)
+        return res
+
+    def topic(self, client, channel, topic):
+        res = None
+        if channel not in self.channels:
+            res = ERROR_CHANNEL_DOES_NOT_EXIST
+        elif self.channels[channel].owner != client:
+            res = ERROR_CANNOT_SET_CHANNEL_TOPIC
+        else:
+            self.channels[channel].topic = topic
+            res = SUCCESS_TOPIC_SET
+
         client.pushMessage(res)
         return res
 
@@ -194,8 +215,7 @@ class Server():
                 channel_list.append(ERROR_CHANNEL_DOES_NOT_EXIST)
 
         # send the big response message back to client
-        channel_list.append("") # for the terminating newline char
-        res = "\n".join(channel_list)
+        res = "".join(channel_list)
         client.pushMessage(res)
         return res
 
