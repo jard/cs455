@@ -15,6 +15,7 @@ ERROR_INVALID_CHANNEL_NAME = "ERROR_INVALID_CHANNEL_NAME\n"
 ERROR_NOT_ON_CHANNEL = "ERROR_NOT_ON_CHANNEL\n"
 ERROR_USER_DOES_NOT_EXIST = "ERROR_USER_DOES_NOT_EXIST\n"
 ERROR_CHANNEL_DOES_NOT_EXIST = "ERROR_CHANNEL_DOES_NOT_EXIST\n"
+ERROR_ALREADY_ON_CHANNEL = "ERROR_ALREADY_ON_CHANNEL\n"
 ERROR_USERNAME_REQUIRED = "ERROR_USERNAME_REQUIRED\n"
 ERROR_NEED_MORE_PARAMS = "ERROR_NEED_MORE_PARAMS\n"
 ERROR_INVALID_COMMAND  = "ERROR_INVALID_COMMAND\n"
@@ -145,8 +146,11 @@ class Server():
             else:
                 # they are joining an already existing channel
                 if channel_name in self.channels:
-                    res = SUCCESS_WELCOME_TO_CHANNEL
                     channel = self.channels[channel_name]
+                    if client.username in channel.clients:
+                        res = ERROR_ALREADY_ON_CHANNEL
+                    else:
+                        res = SUCCESS_WELCOME_TO_CHANNEL
                 # they are creating a new channel
                 else:
                     res = SUCCESS_NEW_CHANNEL_CREATED
@@ -253,7 +257,7 @@ class Server():
             self.removeClientFromChannel(client, self.channels[channel_name])
 
         quitter_username = client.username
-        msg = None
+        msg = "QUIT"
         # only send quit message if they have a username
         if quitter_username:
             # now delete client from server

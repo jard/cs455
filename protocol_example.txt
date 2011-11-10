@@ -50,6 +50,7 @@ successfully joined it
 user successfully joined it
 * ERROR_INVALID_CHANNEL_NAME - when the channel name is invalid (described
 below)
+* ERROR_ALREADY_ON_CHANNEL - when the user is already on the channel
 
 Each response is terminated with a \n and the order of the messages corresponds
 to the order of the parameters. 
@@ -102,18 +103,19 @@ The list message is used to list the public channels on the server, and their
 topics. The server responds to this message by sending the client a list of
 channels in the following format:
 
-channel_1 :topic_1
-channel_2 :topic_2
-channel_3 :topic_3
+channel_1 owner_1 :topic_1
+channel_2 owner_2 :topic_2
+channel_3 owner_3 :topic_3
 .
 .
 .
 
-where 'channel_n' is the name of the channel, and 'topic_n' is the channel's
-topic. Each channel/topic pair is listed on its own line, and is terminated with
-a \n. If one or more channels is specified in the command's parameters, the
-server only returns the channel/topic pairs for the specified channels. If the
-channel does not exist the server does not list it (no error is reported).
+where 'channel_n' is the name of the channel, 'owner_n' is the username of the
+owner of the channel, and 'topic_n' is the channel's topic. Each channel/topic
+pair is listed on its own line, and is terminated with a \n. If one or more
+channels is specified in the command's parameters, the server only returns the
+channel/topic pairs for the specified channels. If the channel does not exist
+the server does not list it (no error is reported).
 
 
 Command: PART
