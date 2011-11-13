@@ -120,7 +120,7 @@ class Server():
     def user(self, client, username):
         if client.username:
             res = ERROR_CANNOT_CHANGE_USERNAME
-        if not self.isValidUsername(username):
+        elif not self.isValidUsername(username):
             res = ERROR_INVALID_USERNAME
         elif username in self.clients:
             res = ERROR_ALREADY_REGISTERED
