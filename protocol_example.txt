@@ -36,12 +36,12 @@ in place of SUCCESS_WELCOME_TO_SERVER. A user cannot change their username.
 
 
 Command: JOIN 
-Parameters: <channel> { <channel>} 
+Parameters: <channel>
 Parameters: <channel> :topic_description
 The JOIN command is used to create and join a channel.  After successfully
 joining the channel, the client begins receiving the chat messages sent to the
 channel. If no channel is specified the server will respond with a
-ERROR_NEED_MORE_PARAMS message. For each channel specified, the server will
+ERROR_NEED_MORE_PARAMS message. For the channel specified, the server will
 respond with one of the following messages:
 
 * SUCCESS_WELCOME_TO_CHANNEL - when the channel already exists and the user
@@ -51,9 +51,6 @@ user successfully joined it
 * ERROR_INVALID_CHANNEL_NAME - when the channel name is invalid (described
 below)
 * ERROR_ALREADY_ON_CHANNEL - when the user is already on the channel
-
-Each response is terminated with a \n and the order of the messages corresponds
-to the order of the parameters. 
 
 The channel parameters must match the following regular expression:
 /^#[A-Za-z0-9_.@-]{1,64}$/
