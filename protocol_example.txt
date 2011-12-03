@@ -1,3 +1,20 @@
+###########
+# General #
+###########
+This protocol specification describes a simple centralized messaging protocol
+for text based communication over a network. The messaging system requires a
+single server which any number of hosts may connect. The hosts talk directly to
+the server; never to each other.
+
+
+########################## 
+# Implementation Details #
+##########################
+The server must listen on TCP port 5000 for incoming connection requests. 
+All messages (as described in the next section) must be no longer than 1024
+bytes in length (including newline).
+
+
 ##################
 # Message Syntax #
 ##################
@@ -15,6 +32,7 @@ HELLO param#1 param#2 param#3 :parameter #4\n
 The server may or may not send a response back to the client when it receives a
 command message.
 
+
 #################
 # Message Types #
 #################
@@ -31,7 +49,7 @@ The server will respond with one of the following messages:
 successfully reserved for the client
 
 After a SUCCESS_WELCOME_TO_SERVER message is received, the client may send
-another USER message, but a ERROR_CANNOT_CHANGE_USERNAME message will be sent
+another USER message, but an ERROR_CANNOT_CHANGE_USERNAME message will be sent
 in place of SUCCESS_WELCOME_TO_SERVER. A user cannot change their username.
 
 
@@ -65,7 +83,8 @@ channel can set the topic. One of the following response messages will be sent
 to the client upon issuing the command:
 * SUCCESS_TOPIC_SET - when the channel topic is successfully modified
 * ERROR_CHANNEL_DOES_NOT_EXIST - when the channel does not exist
-* ERROR_CANNOT_SET_CHANNEL_TOPIC - when the user requesting the change did not create the channel
+* ERROR_CANNOT_SET_CHANNEL_TOPIC - when the user requesting the change did not
+create the channel
 * ERROR_NEED_MORE_PARAMS - when a parameter is missing
 
 
@@ -150,13 +169,46 @@ TCP connections are closed) is:
 
 SQUIT :message_string
 
-####################
-# Joining a Server #
-####################
-1. TCP connection is established between the client and server 
-2. Before issuing any other commands to the server (with the exception of the
-QUIT command), the client must send a USER message to the server, requesting the
-use of the username specified by the parameter.
-3. Only when the SUCCESS_WELCOME_TO_SERVER message is received by the client may it
-send other commands to the server
+
+#############
+# Use Cases #
+#############
+I. Joining a Server
+Preconditions: Server is running.
+1. TCP connection is established between the client and server on port 5000.
+2. Client sends `USER` command to server requesting a valid, unused, username.
+3. Server responds with `SUCCESS_WELCOME_TO_SERVER`.
+
+
+II. Sending a Message to Another User
+Preconditions: Two users (userA and userB) exist on server (see use case I).
+1. userA issues `PRIVMSG userB :Hello` command.
+2. userA receives `SUCCESS_MESSAGE_SENT_TO_USER` message.
+3. userB receives `PRIVMSG userA :Hello` message.
+
+
+III. Joining a Channel
+Preconditions: User has joined server.
+1. User issues `JOIN #example` command.
+2. User receives `SUCCESS_WELCOME_TO_CHANNEL` message.
+
+
+IV. Sending a Message to a Channel
+Preconditions: Channel exists (see III), user has joined server (see I).
+1. userA issues `PRIVMSG #example :hello`.
+2. userA receives `SUCCESS_MESSAGE_SENT_TO_CHANNEL` message.
+3. Everyone on the channel `#example` receives the message `PRIVMSG
+userA#example :hello`
+
+
+V. Parting with a Channel
+Preconditions: User is on channel (see III).
+1. userA issues `PART #example` command.
+2. userA receives `SUCCESS_PARTED_WITH_CHANNEL` messsage.
+
+
+VI. Quiting the Server
+Preconditions: User has joined server (see I)
+1. userA issues `QUIT :bye` message.
+2. Everyone on server receives `QUIT userA :bye` message.
 
